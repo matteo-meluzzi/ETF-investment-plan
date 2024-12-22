@@ -9,27 +9,26 @@ pub struct EtfItem {
 }
 
 fn knap_sack(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, HashSet<usize>) {
-    assert!(weights.len() == values.len());
+    let max_weight = max_weight as usize;
+    let weights = weights.iter().map(|w| *w as usize).collect::<Vec<_>>();
 
-    if weights.len() == 0 || max_weight == 0 {
-        return (0, HashSet::new());
+    let mut dp = vec![0; max_weight + 1];
+    let mut sets = vec![HashSet::<usize>::new(); max_weight + 1];
+
+    for i in 1..=weights.len() {
+        for w in (0..=max_weight).rev() {
+            if weights[i - 1] <= w {
+                if dp[w] < dp[w - weights[i - 1]] + values[i - 1] {
+                    sets[w] = sets[w - weights[i - 1]].clone();
+                    sets[w].insert(i - 1);
+
+                    dp[w] = dp[w - weights[i - 1]] + values[i - 1]
+                }
+            }
+        }
     }
 
-    let n = weights.len() - 1;
-
-    if weights[n] > max_weight {
-        return knap_sack(max_weight, &weights[..n], &values[..n])
-    }
-
-    let (not_include_value, not_include_set) = knap_sack(max_weight, &weights[..n], &values[..n]);
-    let (include_value, mut include_set) = knap_sack(max_weight - weights[n], &weights[..n], &values[..n]);
-
-    if not_include_value > include_value + values[n] {
-        return (not_include_value, not_include_set);
-    } else {
-        include_set.insert(n);
-        return (values[n] + include_value, include_set);
-    }
+    (dp[max_weight], sets[max_weight].clone())
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, new)]
@@ -95,7 +94,15 @@ mod tests {
 
     #[test]
     fn test_knap_sack_three() {
-        let (_, indices) = knap_sack(600, &vec![300, 200, 250], &vec![200, 200, 200]);
+        let (value, indices) = knap_sack(600, &vec![300, 200, 250], &vec![150, 200, 250]);
+        assert_eq!(value, 450);
+        assert_eq!(indices, vec![1, 2].into_iter().collect());
+    }
+
+    #[test]
+    fn test_knap_sack_memo_set_three() {
+        let (value, indices) = knap_sack(600, &vec![300, 200, 250], &vec![150, 200, 250]);
+        assert_eq!(value, 450);
         assert_eq!(indices, vec![1, 2].into_iter().collect());
     }
 
@@ -251,7 +258,7 @@ mod tests {
     #[test]
     fn test_knap_sack_with_exact_capacity() {
         let weights = vec![5, 10, 15];
-        let values = vec![10, 20, 30];
+        let values = vec![10, 19, 30];
         let max_weight = 15;
 
         let (max_value, selected_items) = knap_sack(max_weight, &weights, &values);
