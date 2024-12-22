@@ -1,0 +1,8 @@
+[package]
+name = "ETF-investment-plan"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+yahoo-finance-info = { path = "yahoo-finance-info"}
+
