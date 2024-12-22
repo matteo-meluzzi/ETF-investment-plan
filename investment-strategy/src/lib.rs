@@ -40,7 +40,6 @@ struct KnapSackItem {
     etf_index: usize,
 }
 
-
 fn generate_weights_and_values(budget: i64, etfs: &[EtfItem]) -> Vec<KnapSackItem> {
     let mut items = vec![];
 
