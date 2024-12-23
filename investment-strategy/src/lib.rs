@@ -1,4 +1,4 @@
-use std::{collections::HashSet, rc::Rc};
+use std::rc::Rc;
 use derive_new::new;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, new)]
@@ -13,54 +13,28 @@ enum RcList<T> {
     Node(T, Rc<RcList<T>>),
     Stop
 }
-impl<T: Clone> IntoIterator for RcList<T> {
-    type Item = T;
-    type IntoIter = RcListIterator<T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        RcListIterator { current_list: Rc::new(self) }
+impl<T> RcList<T> {
+    fn iter(&self) -> RcListRefIterator<T> {
+        RcListRefIterator::new(self)
     }
 }
 
-struct RcListIterator<T> {
-    current_list: Rc<RcList<T>>
+#[derive(new)]
+struct RcListRefIterator<'a, T> {
+    current_list: &'a RcList<T>
 }
-impl<T: Clone> Iterator for RcListIterator<T> {
-    type Item = T;
+impl<'a, T> Iterator for RcListRefIterator<'a, T> {
+    type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let curr = self.current_list.clone();
-        match curr.as_ref() {
+        match self.current_list {
             RcList::Stop => None,
             RcList::Node(t, next) => {
-                self.current_list = next.clone();
-                Some(t.clone())
+                self.current_list = next.as_ref();
+                Some(t)
             }
         }
     }
-}
-
-fn knap_sack(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, HashSet<usize>) {
-    let max_weight = max_weight as usize;
-    let weights = weights.iter().map(|w| *w as usize).collect::<Vec<_>>();
-
-    let mut dp = vec![0; max_weight + 1];
-    let mut sets = vec![HashSet::<usize>::new(); max_weight + 1];
-
-    for i in 1..=weights.len() {
-        for w in (0..=max_weight).rev() {
-            if weights[i - 1] <= w {
-                if dp[w] < dp[w - weights[i - 1]] + values[i - 1] {
-                    sets[w] = sets[w - weights[i - 1]].clone();
-                    sets[w].insert(i - 1);
-
-                    dp[w] = dp[w - weights[i - 1]] + values[i - 1]
-                }
-            }
-        }
-    }
-
-    (dp[max_weight], sets[max_weight].clone())
 }
 
 fn knap_sack_rc_list(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, Vec<usize>) {
@@ -84,7 +58,10 @@ fn knap_sack_rc_list(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, 
         }
     }
 
-    (dp[max_weight], Vec::from_iter(trees[max_weight].as_ref().clone().into_iter()))
+    let mut indices = Vec::from_iter(trees[max_weight].as_ref().iter().copied());
+    indices.reverse();
+    assert!(indices.is_sorted());
+    (dp[max_weight], indices)
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, new)]
@@ -150,16 +127,16 @@ mod tests {
 
     #[test]
     fn test_knap_sack_three() {
-        let (value, indices) = knap_sack(600, &vec![300, 200, 250], &vec![150, 200, 250]);
+        let (value, indices) = knap_sack_rc_list(600, &vec![300, 200, 250], &vec![150, 200, 250]);
         assert_eq!(value, 450);
-        assert_eq!(indices, vec![1, 2].into_iter().collect());
+        assert_eq!(indices, vec![1, 2]);
     }
 
     #[test]
     fn test_knap_sack_memo_set_three() {
-        let (value, indices) = knap_sack(600, &vec![300, 200, 250], &vec![150, 200, 250]);
+        let (value, indices) = knap_sack_rc_list(600, &vec![300, 200, 250], &vec![150, 200, 250]);
         assert_eq!(value, 450);
-        assert_eq!(indices, vec![1, 2].into_iter().collect());
+        assert_eq!(indices, vec![1, 2]);
     }
 
     #[test]
@@ -291,7 +268,7 @@ mod tests {
         let values = vec![];
         let max_weight = 10;
 
-        let (max_value, selected_items) = knap_sack(max_weight, &weights, &values);
+        let (max_value, selected_items) = knap_sack_rc_list(max_weight, &weights, &values);
 
         // No items, so max_value should be 0, and the selected_items set should be empty.
         assert_eq!(max_value, 0);
@@ -304,7 +281,7 @@ mod tests {
         let values = vec![10, 20, 30];
         let max_weight = 0;
 
-        let (max_value, selected_items) = knap_sack(max_weight, &weights, &values);
+        let (max_value, selected_items) = knap_sack_rc_list(max_weight, &weights, &values);
 
         // No capacity, so the max_value should be 0, and no items can be selected.
         assert_eq!(max_value, 0);
@@ -317,11 +294,11 @@ mod tests {
         let values = vec![10, 19, 30];
         let max_weight = 15;
 
-        let (max_value, selected_items) = knap_sack(max_weight, &weights, &values);
+        let (max_value, selected_items) = knap_sack_rc_list(max_weight, &weights, &values);
 
         // Max weight is exactly the weight of the third item, so we expect it to be selected.
         assert_eq!(max_value, 30);
-        let expected_items = vec![2].into_iter().collect::<HashSet<_>>();
+        let expected_items = vec![2];
         assert_eq!(selected_items, expected_items);
     }
 
@@ -331,11 +308,11 @@ mod tests {
         let values = vec![10, 20, 30];
         let max_weight = 20;
 
-        let (max_value, selected_items) = knap_sack(max_weight, &weights, &values);
+        let (max_value, selected_items) = knap_sack_rc_list(max_weight, &weights, &values);
 
         // The best value comes from selecting the first and third items, total weight = 20.
         assert_eq!(max_value, 40);
-        let expected_items = vec![0, 2].into_iter().collect::<HashSet<_>>();
+        let expected_items = vec![0, 2];
         assert_eq!(selected_items, expected_items);
     }
 
@@ -345,11 +322,11 @@ mod tests {
         let values = vec![1, 4, 5, 7];
         let max_weight = 7;
 
-        let (max_value, selected_items) = knap_sack(max_weight, &weights, &values);
+        let (max_value, selected_items) = knap_sack_rc_list(max_weight, &weights, &values);
 
         // The optimal selection is the items with weights 3 and 4, values 4 and 5, total value = 9.
         assert_eq!(max_value, 9);
-        let expected_items = vec![1, 2].into_iter().collect::<HashSet<_>>();
+        let expected_items = vec![1, 2];
         assert_eq!(selected_items, expected_items);
     }
 
@@ -359,7 +336,7 @@ mod tests {
         let values = vec![60, 100, 120];
         let max_weight = 5;
 
-        let (max_value, selected_items) = knap_sack(max_weight, &weights, &values);
+        let (max_value, selected_items) = knap_sack_rc_list(max_weight, &weights, &values);
 
         // No items fit in the knapsack, so the value should be 0 and no items selected.
         assert_eq!(max_value, 0);
