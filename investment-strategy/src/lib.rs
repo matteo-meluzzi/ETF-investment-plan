@@ -1,99 +1,14 @@
-use std::rc::Rc;
+mod rclist;
+mod knap_sack;
+
 use derive_new::new;
+use knap_sack::{knap_sack_rc_list, generate_weights_and_values};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, new)]
 pub struct EtfItem {
-    cumulative: i64,
-    target: i64,
-    price: i64,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
-enum RcList<T> {
-    Node(T, Rc<RcList<T>>),
-    Stop
-}
-impl<T> RcList<T> {
-    fn iter(&self) -> RcListRefIterator<T> {
-        RcListRefIterator::new(self)
-    }
-}
-
-#[derive(new)]
-struct RcListRefIterator<'a, T> {
-    current_list: &'a RcList<T>
-}
-impl<'a, T> Iterator for RcListRefIterator<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.current_list {
-            RcList::Stop => None,
-            RcList::Node(t, next) => {
-                self.current_list = next.as_ref();
-                Some(t)
-            }
-        }
-    }
-}
-
-fn knap_sack_rc_list(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, Vec<usize>) {
-    let max_weight = max_weight as usize;
-    let weights = weights.iter().map(|w| *w as usize).collect::<Vec<_>>();
-
-    let mut dp = vec![0; max_weight + 1];
-    let mut trees = vec![Rc::new(RcList::Stop); max_weight + 1];
-
-    for i in 1..=weights.len() {
-        for w in (0..=max_weight).rev() {
-            if weights[i - 1] <= w {
-                if dp[w] < dp[w - weights[i - 1]] + values[i - 1] {
-                    assert_ne!(weights[i-1], 0);
-                    let tree = RcList::Node(i - 1, trees[w - weights[i-1]].clone());
-                    trees[w] = Rc::new(tree);
-
-                    dp[w] = dp[w - weights[i - 1]] + values[i - 1]
-                }
-            }
-        }
-    }
-
-    let mut indices = Vec::from_iter(trees[max_weight].as_ref().iter().copied());
-    indices.reverse();
-    assert!(indices.is_sorted());
-    (dp[max_weight], indices)
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, new)]
-struct KnapSackItem {
-    value: i64,
-    weight: i64,
-
-    etf_index: usize,
-}
-
-fn generate_weights_and_values(budget: i64, etfs: &[EtfItem]) -> Vec<KnapSackItem> {
-    let mut items = vec![];
-
-    for (etf_index, etf) in etfs.iter().enumerate() {
-        let mut buy_quantity = 1;
-        let mut last_error = (etf.target - etf.cumulative).pow(2);
-        while etf.price * buy_quantity <= budget {
-            let amount = etf.cumulative + (etf.price * buy_quantity);
-            let error = (etf.target - amount).pow(2);
-            let value = last_error - error;
-            if value <= 0 {
-                break;
-            }
-
-            items.push(KnapSackItem::new(value, etf.price, etf_index));
-
-            last_error = error;
-            buy_quantity += 1;
-        }
-    }
-    
-    items
+    pub cumulative: i64,
+    pub target: i64,
+    pub price: i64,
 }
 
 pub fn solve_etf_problem(budget: i64, etfs: &[EtfItem]) -> Vec<i64> {
@@ -115,15 +30,15 @@ pub fn calc_total_price(etfs: &[EtfItem], buy_quantities: &[i64]) -> i64 {
     etfs.iter().zip(buy_quantities).map(|(etf, quantity)| etf.price * quantity).sum()
 }
 
-pub fn calc_total_error(etfs: &[EtfItem], buy_quantities: &[i64]) -> i64 {
-    etfs.iter().zip(buy_quantities).map(|(etf, quantity)| {
-        (etf.target - (etf.cumulative + etf.price * quantity)).pow(2)
-    }).sum()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn calc_total_error(etfs: &[EtfItem], buy_quantities: &[i64]) -> i64 {
+        etfs.iter().zip(buy_quantities).map(|(etf, quantity)| {
+            (etf.target - (etf.cumulative + etf.price * quantity)).pow(2)
+        }).sum()
+    }
 
     #[test]
     fn test_knap_sack_three() {
