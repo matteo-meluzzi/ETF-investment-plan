@@ -63,7 +63,7 @@ fn knap_sack(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, HashSet<
     (dp[max_weight], sets[max_weight].clone())
 }
 
-fn knap_sack_tree(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, Vec<usize>) {
+fn knap_sack_rc_list(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, Vec<usize>) {
     let max_weight = max_weight as usize;
     let weights = weights.iter().map(|w| *w as usize).collect::<Vec<_>>();
 
@@ -125,7 +125,7 @@ pub fn solve_etf_problem(budget: i64, etfs: &[EtfItem]) -> Vec<i64> {
     let values = items.iter().map(|item| item.value).collect::<Vec<_>>();
 
     let mut buy_quantities = vec![0i64; etfs.len()];
-    let (_, item_indices) = knap_sack_tree(budget, &weights, &values);
+    let (_, item_indices) = knap_sack_rc_list(budget, &weights, &values);
     for item_index in item_indices {
         let item = items[item_index];
         buy_quantities[item.etf_index] += 1;
