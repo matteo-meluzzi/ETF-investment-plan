@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, rc::Rc};
 use derive_new::new;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, new)]
@@ -6,6 +6,38 @@ pub struct EtfItem {
     cumulative: i64,
     target: i64,
     price: i64,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+enum RcList<T> {
+    Node(T, Rc<RcList<T>>),
+    Stop
+}
+impl<T: Clone> IntoIterator for RcList<T> {
+    type Item = T;
+    type IntoIter = RcListIterator<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RcListIterator { current_list: Rc::new(self) }
+    }
+}
+
+struct RcListIterator<T> {
+    current_list: Rc<RcList<T>>
+}
+impl<T: Clone> Iterator for RcListIterator<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.current_list.clone();
+        match curr.as_ref() {
+            RcList::Stop => None,
+            RcList::Node(t, next) => {
+                self.current_list = next.clone();
+                Some(t.clone())
+            }
+        }
+    }
 }
 
 fn knap_sack(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, HashSet<usize>) {
@@ -29,6 +61,30 @@ fn knap_sack(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, HashSet<
     }
 
     (dp[max_weight], sets[max_weight].clone())
+}
+
+fn knap_sack_tree(max_weight: i64, weights: &[i64], values: &[i64]) -> (i64, Vec<usize>) {
+    let max_weight = max_weight as usize;
+    let weights = weights.iter().map(|w| *w as usize).collect::<Vec<_>>();
+
+    let mut dp = vec![0; max_weight + 1];
+    let mut trees = vec![Rc::new(RcList::Stop); max_weight + 1];
+
+    for i in 1..=weights.len() {
+        for w in (0..=max_weight).rev() {
+            if weights[i - 1] <= w {
+                if dp[w] < dp[w - weights[i - 1]] + values[i - 1] {
+                    assert_ne!(weights[i-1], 0);
+                    let tree = RcList::Node(i - 1, trees[w - weights[i-1]].clone());
+                    trees[w] = Rc::new(tree);
+
+                    dp[w] = dp[w - weights[i - 1]] + values[i - 1]
+                }
+            }
+        }
+    }
+
+    (dp[max_weight], Vec::from_iter(trees[max_weight].as_ref().clone().into_iter()))
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, new)]
@@ -69,7 +125,7 @@ pub fn solve_etf_problem(budget: i64, etfs: &[EtfItem]) -> Vec<i64> {
     let values = items.iter().map(|item| item.value).collect::<Vec<_>>();
 
     let mut buy_quantities = vec![0i64; etfs.len()];
-    let (_, item_indices) = knap_sack(budget, &weights, &values);
+    let (_, item_indices) = knap_sack_tree(budget, &weights, &values);
     for item_index in item_indices {
         let item = items[item_index];
         buy_quantities[item.etf_index] += 1;
