@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+derive-new = "0.7.0"
 investment-strategy = { path = "../investment-strategy" }
+chrono = "0.4.39"

@@ -11,8 +11,8 @@ pub struct EtfItem {
     pub price: i64,
 }
 
-pub fn solve_etf_problem(budget: i64, etfs: &[EtfItem]) -> Vec<i64> {
-    let items = generate_weights_and_values(budget, etfs);
+pub fn solve_etf_problem(budget: i64, etfs: Vec<EtfItem>) -> Vec<(EtfItem, i64)> {
+    let items = generate_weights_and_values(budget, &etfs);
     let weights = items.iter().map(|item| item.weight).collect::<Vec<_>>();
     let values = items.iter().map(|item| item.value).collect::<Vec<_>>();
 
@@ -23,7 +23,7 @@ pub fn solve_etf_problem(budget: i64, etfs: &[EtfItem]) -> Vec<i64> {
         buy_quantities[item.etf_index] += 1;
     }
 
-    buy_quantities
+    etfs.into_iter().zip(buy_quantities).collect()
 }
 
 pub fn calc_total_price(etfs: &[EtfItem], buy_quantities: &[i64]) -> i64 {

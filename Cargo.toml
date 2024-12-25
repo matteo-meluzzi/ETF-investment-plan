@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 yahoo-finance-info = { path = "yahoo-finance-info"}
 investment-strategy = { path = "investment-strategy" }
+derive-new = "0.7.0"
