@@ -1,10 +1,9 @@
 use std::io::{self, BufRead};
 use std::str::FromStr;
 use futures::future::try_join_all;
-use yahoo_finance_info::{get_price_of, YahooError, ETF};
-use investment_planner::{next_investments, EtfSetting, Settings, EtfId};
+use yahoo_finance_info::{get_price_of, YahooError};
+use investment_planner::{next_investments, EtfSetting, Settings};
 use tokio;
-use tokio::task::JoinSet;
 
 fn ask_until_valid<T: FromStr, R: BufRead>(reader: &mut R, err_msg: &str, constraint: Option<&dyn Fn(&T) -> bool>) -> Result<T, io::Error> {
     let result: T;

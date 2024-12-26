@@ -51,7 +51,7 @@ mod tests {
 
     #[test]
     fn test_next_investments_one() {
-        let settings = Settings::new(600_00, vec![EtfSetting::new("ID1".into(), 0.5, 100_00)]);
+        let settings = Settings::new(600_00, vec![EtfSetting::new("ID1".into(), "".to_string(),0.5, 100_00)]);
         let prices = vec![5_00f64];
         let investments = next_investments(settings, &prices);
         assert_eq!(investments, vec![Investment::new("ID1".into(), "".to_string(),120)])

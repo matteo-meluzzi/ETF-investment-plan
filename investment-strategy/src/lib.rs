@@ -60,8 +60,8 @@ mod tests {
         let etfs = vec![
             EtfItem::new(0, 5, 1),
         ];
-        let buy_quantities = solve_etf_problem(budget, &etfs);
-        assert_eq!(buy_quantities, vec![5]);
+        let buy_quantities = solve_etf_problem(budget, etfs.clone());
+        assert_eq!(buy_quantities, etfs.into_iter().zip(vec![5]).collect::<Vec<_>>());
     }
 
     #[test]
@@ -71,8 +71,8 @@ mod tests {
             EtfItem::new(0, 5, 8),
             EtfItem::new(80, 95, 5),
         ];
-        let buy_quantities = solve_etf_problem(budget, &etfs);
-        assert_eq!(buy_quantities, vec![1, 3]);
+        let buy_quantities = solve_etf_problem(budget, etfs.clone());
+        assert_eq!(buy_quantities, etfs.into_iter().zip(vec![1, 3]).collect::<Vec<_>>());
     }
 
     #[test]
@@ -83,11 +83,11 @@ mod tests {
             EtfItem::new(0, 200, 200),
             EtfItem::new(0, 200, 250),
         ];
-        let buy_quantities = solve_etf_problem(budget, &etfs);
-        assert_eq!(buy_quantities, vec![0, 1, 1]);
-        let total_price = calc_total_price(&etfs, &buy_quantities);
+        let buy_quantities = solve_etf_problem(budget, etfs.clone());
+        assert_eq!(buy_quantities, etfs.clone().into_iter().zip(vec![0, 1, 1]).collect::<Vec<_>>());
+        let total_price = calc_total_price(&etfs, &buy_quantities.iter().map(|q| q.1).collect::<Vec<_>>());
         assert_eq!(total_price, 450);
-        let total_error = calc_total_error(&etfs, &buy_quantities);
+        let total_error = calc_total_error(&etfs, &buy_quantities.iter().map(|q| q.1).collect::<Vec<_>>());
         assert_eq!(total_error, 42500);
     }
 
@@ -99,11 +99,11 @@ mod tests {
             EtfItem::new(200, 400, 200),
             EtfItem::new(250, 400, 250),
         ];
-        let buy_quantities = solve_etf_problem(budget, &etfs);
-        assert_eq!(buy_quantities, vec![1, 1, 1]);
-        let total_price = calc_total_price(&etfs, &buy_quantities);
+        let buy_quantities = solve_etf_problem(budget, etfs.clone());
+        assert_eq!(buy_quantities, etfs.clone().into_iter().zip(vec![1, 1, 1]).collect::<Vec<_>>());
+        let total_price = calc_total_price(&etfs, &buy_quantities.iter().map(|q| q.1).collect::<Vec<_>>());
         assert_eq!(total_price, 750);
-        let total_error = calc_total_error(&etfs, &buy_quantities);
+        let total_error = calc_total_error(&etfs, &buy_quantities.iter().map(|q| q.1).collect::<Vec<_>>());
         assert_eq!(total_error, 20000);
     }
 
@@ -115,11 +115,11 @@ mod tests {
             EtfItem::new(400, 600, 200),
             EtfItem::new(500, 600, 250),
         ];
-        let buy_quantities = solve_etf_problem(budget, &etfs);
-        assert_eq!(buy_quantities, vec![1, 1, 0]);
-        let total_price = calc_total_price(&etfs, &buy_quantities);
+        let buy_quantities = solve_etf_problem(budget, etfs.clone());
+        assert_eq!(buy_quantities, etfs.clone().into_iter().zip(vec![1, 1, 0]).collect::<Vec<_>>());
+        let total_price = calc_total_price(&etfs, &buy_quantities.iter().map(|q| q.1).collect::<Vec<_>>());
         assert_eq!(total_price, 500);
-        let total_error = calc_total_error(&etfs, &buy_quantities);
+        let total_error = calc_total_error(&etfs, &buy_quantities.iter().map(|q| q.1).collect::<Vec<_>>());
         assert_eq!(total_error, 10000);
     }
 
@@ -131,11 +131,11 @@ mod tests {
             EtfItem::new(600, 800, 200),
             EtfItem::new(500, 800, 250),
         ];
-        let buy_quantities = solve_etf_problem(budget, &etfs);
-        assert_eq!(buy_quantities, vec![0, 1, 1]);
-        let total_price = calc_total_price(&etfs, &buy_quantities);
+        let buy_quantities = solve_etf_problem(budget, etfs.clone());
+        assert_eq!(buy_quantities, etfs.clone().into_iter().zip(vec![0, 1, 1]).collect::<Vec<_>>());
+        let total_price = calc_total_price(&etfs, &buy_quantities.iter().map(|q| q.1).collect::<Vec<_>>());
         assert_eq!(total_price, 450);
-        let total_error = calc_total_error(&etfs, &buy_quantities);
+        let total_error = calc_total_error(&etfs, &buy_quantities.iter().map(|q| q.1).collect::<Vec<_>>());
         assert_eq!(total_error, 42500);
     }
 
@@ -147,8 +147,8 @@ mod tests {
             EtfItem::new(600, 800, 200),
             EtfItem::new(500, 800, 250),
         ];
-        let buy_quantities = solve_etf_problem(budget, &etfs);
-        assert_eq!(buy_quantities, vec![0, 0, 0]);
+        let buy_quantities = solve_etf_problem(budget, etfs.clone());
+        assert_eq!(buy_quantities,etfs.into_iter().zip(vec![0, 0, 0]).collect::<Vec<_>>());
     }
 
     #[test]
@@ -159,8 +159,8 @@ mod tests {
             EtfItem::new(600, 500, 200),
             EtfItem::new(500, 1000, 250),
         ];
-        let buy_quantities = solve_etf_problem(budget, &etfs);
-        assert_eq!(buy_quantities, vec![1, 0, 2]);
+        let buy_quantities = solve_etf_problem(budget, etfs.clone());
+        assert_eq!(buy_quantities, etfs.into_iter().zip(vec![1, 0, 2]).collect::<Vec<_>>());
     }
 
     #[test]
