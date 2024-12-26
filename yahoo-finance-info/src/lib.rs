@@ -39,14 +39,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_etf_isin() {
-        let xs = search_etf_isin("IE00B3ZW0K18").await.unwrap();
+        let xs = search_etf_isin(&"IE00B3ZW0K18".to_string()).await.unwrap();
         assert_eq!(xs.len(), 1);
         assert_eq!(xs[0], ETF::new("iShares S&P 500 EUR Hedged UCITS ETF (Acc)".to_string(), "IE00B3ZW0K18".into(), "IUSE.L".into()));
     }
 
     #[tokio::test]
     async fn test_get_price_of() {
-        let price = get_price_of("IUSE.L").await.unwrap();
+        let price = get_price_of(&"IUSE.L".to_string()).await.unwrap();
         assert!(price > 0.0);
     }
 }
