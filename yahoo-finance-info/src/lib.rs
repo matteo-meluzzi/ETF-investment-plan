@@ -6,9 +6,9 @@ pub type Ticker = String;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ETF {
-    name: String,
-    isin: Isin,
-    ticker: Ticker
+    pub name: String,
+    pub isin: Isin,
+    pub ticker: Ticker
 }
 
 impl ETF {

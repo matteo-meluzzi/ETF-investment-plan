@@ -5,5 +5,7 @@ edition = "2021"
 
 [dependencies]
 yahoo-finance-info = { path = "yahoo-finance-info"}
-investment-strategy = { path = "investment-strategy" }
+investment-planner = { path = "investment-planner" }
 derive-new = "0.7.0"
+tokio = {version = "1.42.0", features = ["rt", "macros"]}
+futures = "0.3.31"
