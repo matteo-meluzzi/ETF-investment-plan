@@ -1,7 +1,7 @@
 use std::io::{self, BufRead};
 use std::str::FromStr;
 use futures::future::try_join_all;
-use yahoo_finance_info::{get_price_of, YahooError};
+use yahoo_finance_info::{get_price_of, search_etf_isin, YahooError};
 use investment_planner::{next_investments, EtfSetting, Settings};
 use tokio;
 
@@ -97,7 +97,11 @@ fn suggest_investments(settings: Settings, prices: &[f64]) {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let settings = ask_settings(io::stdin().lock()).await.unwrap();
+    // let settings = ask_settings(io::stdin().lock()).await.unwrap();
+    let settings = Settings::new(500, vec![
+        EtfSetting::new("AGGG.L".into(), "iShares Core Global Aggregate Bond UCITS ETF USD (Dist)".into(), 0.9, 100),
+        EtfSetting::new("IUIT.L".into(), "iShares S&P 500 Information Technology Sector UCITS ETF USD (Acc)".into(), 0.1, 50),
+    ]);
     let prices = try_join_all(settings.etf_settings.iter().map(|etf| get_price_of(&etf.id))).await.unwrap();
     suggest_investments(settings, &prices);
 }
