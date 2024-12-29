@@ -16,6 +16,7 @@ pub struct Investment {
 #[derive(Debug, Clone, PartialEq, new)]
 pub struct EtfSetting {
     pub id: EtfId,
+    pub isin: String,
     pub name: String,
     pub ideal_proportion: f64,
     pub cumulative: i64
@@ -51,18 +52,18 @@ mod tests {
 
     #[test]
     fn test_next_investments_one() {
-        let settings = Settings::new(600_00, vec![EtfSetting::new("ID1".into(), "".to_string(),0.5, 100_00)]);
+        let settings = Settings::new(600_00, vec![EtfSetting::new("ID1".into(), "".to_string(), "".to_string(),0.5, 100_00)]);
         let prices = vec![5_00f64];
         let investments = next_investments(settings, &prices);
-        assert_eq!(investments, vec![Investment::new("ID1".into(), "".to_string(),120)])
+        assert_eq!(investments, vec![Investment::new("ID1".into(), "".to_string(), "".to_string(),120)])
     }
 
     #[test]
     fn test_next_investments_thre() {
         let settings = Settings::new(500_00, vec![
-            EtfSetting::new("ID1".into(), "".to_string(),0.5, 100_00),
-            EtfSetting::new("ID2".into(), "".to_string(),1.0, 100_00),
-            EtfSetting::new("ID3".into(), "".to_string(),0.5, 100_00),
+            EtfSetting::new("ID1".into(), "".to_string(), "".to_string(),0.5, 100_00),
+            EtfSetting::new("ID2".into(), "".to_string(), "".to_string(),1.0, 100_00),
+            EtfSetting::new("ID3".into(), "".to_string(), "".to_string(),0.5, 100_00),
         ]);
         let prices = vec![5_00f64, 5_00f64, 5_00f64];
         let investments = next_investments(settings, &prices);
@@ -76,9 +77,9 @@ mod tests {
     #[test]
     fn test_next_investments_three_not_perfect() {
         let etf_settings = vec![
-            EtfSetting::new("ID1".into(), "".to_string(),0.25, 25_00),
-            EtfSetting::new("ID2".into(), "".to_string(),0.25, 25_00),
-            EtfSetting::new("ID3".into(), "".to_string(),0.5, 50_00),
+            EtfSetting::new("ID1".into(), "".to_string(), "".to_string(),0.25, 25_00),
+            EtfSetting::new("ID2".into(), "".to_string(), "".to_string(),0.25, 25_00),
+            EtfSetting::new("ID3".into(), "".to_string(), "".to_string(),0.5, 50_00),
         ];
         let settings = Settings::new(100_00, etf_settings.clone());
         let prices = vec![7_00f64, 9_00f64, 3_00f64];

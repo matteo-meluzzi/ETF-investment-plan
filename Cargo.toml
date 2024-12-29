@@ -1,11 +1,20 @@
 [package]
-name = "ETF-investment-plan"
+name = "etf-investment-plan"
 version = "0.1.0"
 edition = "2021"
+
+[lib]
+name = "etf_investment_plan"
+# crate-type = ["cdylib"]      # Creates dynamic lib
+crate-type = ["staticlib"] # Creates static lib
 
 [dependencies]
 yahoo-finance-info = { path = "yahoo-finance-info"}
 investment-planner = { path = "investment-planner" }
+database = { path = "database" }
 derive-new = "0.7.0"
-tokio = {version = "1.42.0", features = ["rt", "macros"]}
+tokio = {version = "1.42.0", features = ["full"]}
 futures = "0.3.31"
+
+[profile.release]
+strip = true 

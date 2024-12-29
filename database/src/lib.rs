@@ -21,15 +21,18 @@ impl Database {
 
         let query = "
             CREATE TABLE IF NOT EXISTS etf (id TEXT PRIMARY KEY, isin TEXT, name TEXT, proportion FLOAT, cumulative INTEGER);
+            CREATE TABLE IF NOT EXISTS budget (id INTEGER PRIMARY KEY, budget INTEGER);
         ";
         connection.execute(query)?;
-    
-        Ok(Database { connection })
+
+        let db = Database { connection };
+        db.set_budget(0)?;
+        Ok(db)
     }
 
     pub fn add_etf(&self, etf: EtfData) -> Result<(), SqliteError> {
         let query = "
-            INSERT INTO etf (id, isin, name, proportion, cumulative) 
+            INSERT OR REPLACE INTO etf (id, isin, name, proportion, cumulative) 
             VALUES (:id, :isin, :name, :proportion, :cumulative);
         ";
 
@@ -103,6 +106,28 @@ impl Database {
         statement.next()?;
         Ok(())    
     }
+
+    pub fn set_budget(&self, budget: i64) -> Result<(), SqliteError> {
+        let query = "
+            INSERT OR REPLACE INTO budget (id, budget)
+            values (0, :budget);
+        ";
+        let mut statement = self.connection.prepare(query)?;
+        statement.bind::<&[(_, Value)]>(&[(":budget", budget.into())])?;
+        statement.next()?;
+        Ok(())
+    }
+
+    pub fn get_budget(&self) -> Result<Option<i64>, SqliteError> {
+        let query = "
+            SELECT budget from budget WHERE id = 0;
+        ";
+        let statement = self.connection.prepare(query)?;
+        statement.into_iter().map(|row| row.map(|row| {
+            let budget: i64 = row.read("budget");
+            budget
+        })).next().transpose()
+    }
 }
 
 
@@ -112,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_connect() {
-        let db = Database::new(":memory:").unwrap();
+        let db = Database::new("db").unwrap();
         
         db.add_etf(EtfData::new("AGGG.L".into(), "ISIN".into(), "NAME ETF".into(), 0.9, 100)).unwrap();
 
@@ -130,5 +155,19 @@ mod tests {
 
         let j = db.get_etf("random id").unwrap();
         assert!(j.is_none());
+
+        db.add_etf(EtfData::new("AGGG.L".into(), "ISIN".into(), "NAME ETF".into(), 0.1, 10)).unwrap();
+        let p = db.get_all_etfs().unwrap();
+        for etf in p {
+            let etf = etf.unwrap();
+            println!("{} {} {}", etf.name, etf.proportion, etf.cumulative);
+        }
+
+        db.set_budget(500).unwrap();
+        let b = db.get_budget().unwrap().unwrap();
+        println!("budget: {b}");
+        db.set_budget(50).unwrap();
+        let b = db.get_budget().unwrap().unwrap();
+        println!("budget: {b}");
     }
 }
