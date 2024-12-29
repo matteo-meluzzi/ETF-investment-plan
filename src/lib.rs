@@ -1,6 +1,6 @@
 use std::ffi::{c_char, CStr, CString};
 use std::fmt::Display;
-use std::{mem, ptr};
+use std::mem;
 use std::sync::{LazyLock, Mutex};
 use database::{Database, EtfData, SqliteError};
 use derive_new::new;
