@@ -3,6 +3,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+typedef struct CEtfInfo {
+  const char *id;
+  const char *name;
+  const char *isin;
+} CEtfInfo;
+
 typedef struct CInvestment {
   const char *etf_id;
   const char *name;
@@ -28,7 +34,7 @@ typedef struct CSettings {
   uintptr_t num_etf_settings;
 } CSettings;
 
-const char *get_name_of(const char *etf_isin_ptr);
+const struct CEtfInfo *search_etf_info(const char *etf_isin_ptr);
 
 double get_price_of(const char *etf_id_ptr);
 

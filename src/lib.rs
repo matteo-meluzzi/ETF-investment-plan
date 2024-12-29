@@ -113,6 +113,14 @@ impl From<Settings> for CSettings {
     }
 }
 
+#[repr(C)]
+#[derive(new)]
+pub struct CEtfInfo {
+    pub id: *const c_char,
+    pub name: *const c_char,
+    pub isin: *const c_char,
+}
+
 fn check_result<T, E: Display, Ret, RetErr: Fn() -> Ret, RetOk: Fn(T) -> Ret>(result: Result<T, E>, ret_err: RetErr, ret_ok: RetOk) -> Ret {
     match result {
         Err(e) => {
@@ -131,7 +139,7 @@ fn check_option<T, Ret, RetNone: Fn() -> Ret, RetSome: Fn(T) -> Ret>(option: Opt
 }
 
 #[no_mangle]
-pub extern "C" fn get_name_of(etf_isin_ptr: *const c_char) -> *const c_char {
+pub extern "C" fn search_etf_info(etf_isin_ptr: *const c_char) -> *const CEtfInfo {
     let etf_isin = c_char_ptr_to_string(etf_isin_ptr);
 
     let result = RT.block_on(yahoo_finance_info::search_etf_isin(&etf_isin));
@@ -149,7 +157,8 @@ pub extern "C" fn get_name_of(etf_isin_ptr: *const c_char) -> *const c_char {
                     std::ptr::null()
                 }, 
                 |x| {
-                    string_to_c_char_ptr(x.name)
+                    let etf_info = CEtfInfo::new(string_to_c_char_ptr(x.ticker), string_to_c_char_ptr(x.name), string_to_c_char_ptr(x.isin));
+                    Box::into_raw(Box::new(etf_info))
                 })
         })
 }
