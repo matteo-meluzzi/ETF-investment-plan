@@ -4,8 +4,10 @@ use std::{mem, ptr};
 use std::sync::{LazyLock, Mutex};
 use database::{Database, EtfData, SqliteError};
 use derive_new::new;
-use investment_planner::{EtfSetting, Settings};
+use investment_planner::{EtfSetting, Investment, Settings};
 use tokio::runtime::Runtime;
+use yahoo_finance_info::YahooError;
+use futures::future;
 
 static RT: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().expect("Could not initialize tokio async runtime"));
 static DB: LazyLock<Mutex<Database>> = LazyLock::new(|| Mutex::new(Database::new("db").expect("Could not create database from 'db' file")));
@@ -27,12 +29,28 @@ pub struct CInvestment {
     pub name: *const c_char,
     pub quantity: i64,
 }
+impl From<Investment> for CInvestment {
+    fn from(investment: Investment) -> Self {
+        CInvestment::new(string_to_c_char_ptr(investment.etf_id), string_to_c_char_ptr(investment.name), investment.quantity)
+    }
+}
 
 #[repr(C)]
 #[derive(new)]
 pub struct CInvestments {
     pub investments: *const CInvestment,
     pub length: usize,
+}
+impl From<Vec<Investment>> for CInvestments {
+    fn from(investments: Vec<Investment>) -> Self {
+        let mut c_investments = investments.into_iter().map(|i| CInvestment::from(i)).collect::<Vec<_>>();
+        c_investments.shrink_to_fit();
+        let len = c_investments.len();
+        let c_investments_ptr = c_investments.as_ptr();
+        mem::forget(c_investments);
+
+        CInvestments::new(c_investments_ptr, len)
+    }
 }
 
 #[repr(C)]
@@ -47,6 +65,11 @@ pub struct CEtfSetting {
 impl CEtfSetting {
     fn etf_setting(&self) -> EtfSetting {
         EtfSetting::new(c_char_ptr_to_string(self.id), c_char_ptr_to_string(self.isin), c_char_ptr_to_string(self.name), self.ideal_proportion, self.cumulative)
+    }
+}
+impl From<EtfSetting> for CEtfSetting {
+    fn from(etf_setting: EtfSetting) -> Self {
+        CEtfSetting::new(string_to_c_char_ptr(etf_setting.id), string_to_c_char_ptr(etf_setting.isin), string_to_c_char_ptr(etf_setting.name), etf_setting.ideal_proportion, etf_setting.cumulative)
     }
 }
 
@@ -71,6 +94,22 @@ impl CSettings {
         }
         
         Settings::new(budget, etf_settings)
+    }
+}
+impl From<Settings> for CSettings {
+    fn from(settings: Settings) -> Self {
+        let mut c_etf_settings = settings.etf_settings
+            .into_iter()
+            .map(|etf| 
+                CEtfSetting::from(etf)
+            )
+            .collect::<Vec<_>>();
+        c_etf_settings.shrink_to_fit();
+        let len = c_etf_settings.len();
+        let etf_settings_ptr = c_etf_settings.as_ptr();
+        mem::forget(c_etf_settings);
+
+        CSettings::new(settings.budget, etf_settings_ptr, len)
     }
 }
 
@@ -137,6 +176,11 @@ fn get_settings_from_db() -> Result<Settings, SqliteError> {
     Ok(Settings::new(budget, etf_settings))
 }
 
+async fn get_prices(settings: &Settings) -> Result<Vec<f64>, YahooError> {
+    let futures = settings.etf_settings.iter().map(|etf| yahoo_finance_info::get_price_of(&etf.id));
+    future::try_join_all(futures).await
+}
+
 #[no_mangle]
 pub extern "C" fn suggest_investments() -> CInvestments {    
     let settings = match get_settings_from_db() {
@@ -147,7 +191,7 @@ pub extern "C" fn suggest_investments() -> CInvestments {
         Ok(settings) => settings
     };
 
-    let prices = settings.etf_settings.iter().map(|etf| RT.block_on(yahoo_finance_info::get_price_of(&etf.id))).collect::<Result<Vec<_>, _>>();
+    let prices = RT.block_on(get_prices(&settings));
     let prices = match prices {
         Err(e) => {
             eprintln!("{e}");
@@ -157,17 +201,7 @@ pub extern "C" fn suggest_investments() -> CInvestments {
     };
     
     let xs = investment_planner::next_investments(settings, &prices);
-    let mut c_investments = Vec::with_capacity(xs.len());
-    for x in xs {
-        let c_investment = CInvestment::new(string_to_c_char_ptr(x.etf_id), string_to_c_char_ptr(x.name), x.quantity);
-        c_investments.push(c_investment);
-    }
-    c_investments.shrink_to_fit();
-    let len = c_investments.len();
-    let c_investments_ptr = c_investments.as_ptr();
-    mem::forget(c_investments);
-    
-    CInvestments::new(c_investments_ptr, len)
+    CInvestments::from(xs)
 }
 
 #[no_mangle]
@@ -199,16 +233,6 @@ pub extern "C" fn get_settings() -> *const CSettings {
         }
         Ok(settings) => settings
     };
-    let mut c_etf_settings = settings.etf_settings
-        .into_iter()
-        .map(|etf| 
-            CEtfSetting::new(string_to_c_char_ptr(etf.id), string_to_c_char_ptr(etf.isin), string_to_c_char_ptr(etf.name), etf.ideal_proportion, etf.cumulative)
-        )
-        .collect::<Vec<_>>();
-    c_etf_settings.shrink_to_fit();
-    let len = c_etf_settings.len();
-    let etf_settings_ptr = c_etf_settings.as_ptr();
-    mem::forget(c_etf_settings);
 
-    Box::into_raw(Box::new(CSettings::new(settings.budget, etf_settings_ptr, len)))
+    Box::into_raw(Box::new(CSettings::from(settings)))
 }
