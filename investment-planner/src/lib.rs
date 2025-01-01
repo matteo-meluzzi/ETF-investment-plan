@@ -11,6 +11,7 @@ pub struct Investment {
     pub etf_id: EtfId,
     pub name: String,
     pub quantity: i64,
+    pub price: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, new)]
@@ -29,12 +30,13 @@ pub struct Settings {
 }
 
 pub fn next_investments(settings: Settings, prices: &[f64]) -> Vec<Investment> {
+    assert!(prices.iter().all(|&p| p > 0.0));
     let items = calc_etf_items(&settings, prices);
     let solution = solve_etf_problem(settings.budget, items);
 
     let investments = solution.into_iter()
             .zip(settings.etf_settings)
-            .map(|((_, quantity), etf_setting)| Investment::new(etf_setting.id, etf_setting.name, quantity));
+            .map(|((item, quantity), etf_setting)| Investment::new(etf_setting.id, etf_setting.name, quantity, item.price));
     investments.collect()
 }
 

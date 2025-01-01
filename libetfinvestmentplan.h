@@ -13,6 +13,7 @@ typedef struct CInvestment {
   const char *etf_id;
   const char *name;
   int64_t quantity;
+  int64_t price;
 } CInvestment;
 
 typedef struct CInvestments {

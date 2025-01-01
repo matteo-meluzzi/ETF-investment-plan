@@ -25,8 +25,16 @@ impl Database {
         ";
         connection.execute(query)?;
 
+        {
+            let query = "
+                INSERT OR IGNORE INTO budget (id, budget)
+                values (0, 0);
+            ";
+            let mut statement = connection.prepare(query)?;
+            statement.next()?;
+        }
+
         let db = Database { connection };
-        db.set_budget(0)?;
         Ok(db)
     }
 
@@ -35,9 +43,7 @@ impl Database {
             INSERT OR REPLACE INTO etf (id, isin, name, proportion, cumulative) 
             VALUES (:id, :isin, :name, :proportion, :cumulative);
         ";
-
         let mut statement = self.connection.prepare(query)?;
-
         statement.bind::<&[(_, Value)]>(&[
             (":id", etf.id.into()),
             (":isin", etf.isin.into()),
@@ -45,9 +51,19 @@ impl Database {
             (":proportion", etf.proportion.into()),
             (":cumulative", etf.cumulative.into()),
         ])?;
-
         statement.next()?;
+        Ok(())
+    }
 
+    pub fn remove_etf(&self, etf_id: String) -> Result<(), SqliteError> {
+        let query = "
+            DELETE FROM etf WHERE id = :id;
+        ";
+        let mut statement = self.connection.prepare(query)?;
+        statement.bind::<&[(_, Value)]>(&[
+            (":id", etf_id.into()),
+        ])?;
+        statement.next()?;
         Ok(())
     }
     
@@ -169,5 +185,18 @@ mod tests {
         db.set_budget(50).unwrap();
         let b = db.get_budget().unwrap().unwrap();
         println!("budget: {b}");
+    }
+
+    #[test]
+    fn test_set_budget() {
+        let db = Database::new("db").unwrap();
+        db.set_budget(42).unwrap();
+    }
+
+    #[test]
+    fn test_get_budget() {
+        let db = Database::new("db").unwrap();
+        let b = db.get_budget().unwrap().unwrap();
+        println!("{b}")
     }
 }

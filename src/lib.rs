@@ -28,10 +28,11 @@ pub struct CInvestment {
     pub etf_id: *const c_char,
     pub name: *const c_char,
     pub quantity: i64,
+    pub price: i64
 }
 impl From<Investment> for CInvestment {
     fn from(investment: Investment) -> Self {
-        CInvestment::new(string_to_c_char_ptr(investment.etf_id), string_to_c_char_ptr(investment.name), investment.quantity)
+        CInvestment::new(string_to_c_char_ptr(investment.etf_id), string_to_c_char_ptr(investment.name), investment.quantity, investment.price)
     }
 }
 
@@ -206,7 +207,7 @@ pub extern "C" fn suggest_investments() -> CInvestments {
             eprintln!("{e}");
             return CInvestments::new(std::ptr::null(), 0);
         }
-        Ok(prices) => prices
+        Ok(prices) => prices.into_iter().map(|p: f64| p * 100.0 /* convert euros to cents */).collect::<Vec<_>>() 
     };
     
     let xs = investment_planner::next_investments(settings, &prices);
@@ -222,6 +223,28 @@ pub extern "C" fn persist_settings(settings: *const CSettings) -> i64 {
     if let Err(e) = db.set_budget(settings.budget) {
         eprintln!("{e}");
         return  -1;
+    }
+    match db.get_all_etfs() {
+        Err(e) => {
+            eprintln!("{e}");
+            return  -2;
+        }
+        Ok(etfs) => {
+            for etf in etfs {
+                match etf {
+                    Err(e) => {
+                        eprintln!("{e}");
+                        return  -3;
+                    }
+                    Ok(etf) => {
+                        if let Err(e) = db.remove_etf(etf.id) {
+                            eprintln!("{e}");
+                            return  -4;
+                        }
+                    }
+                }
+            }
+        }
     }
     for etf in settings.etf_settings {
         if let Err(e) = db.add_etf(EtfData::new(etf.id, etf.isin, etf.name, etf.ideal_proportion, etf.cumulative)) {
